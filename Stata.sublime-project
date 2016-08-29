@@ -1,0 +1,9 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"file_include_patterns": ["*.ado", "*.md", "*.py"]
+		}
+	]
+}
