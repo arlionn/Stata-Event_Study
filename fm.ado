@@ -1,11 +1,12 @@
-*! Date     : 2016-07-21
-*! version  : 0.3
+*! Date     : 2016-12-11
+*! version  : 0.4
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! takes coefficients from -statsby- and time/lags for Newey-West SEs
 
 /* 
+2016-12-11 v0.4 unique name for average R2
 2016-07-21 v0.3 option to save first-stage results
 2016-07-20 v0.2 more flexible, allows arbitrary first-stage regression
 2016-07-18 v0.1 first upload to GitHub
@@ -85,7 +86,7 @@ program define fm, eclass
     local df_r = `T' - 1
     local df_m : word count `X'
     summarize _eq2_stat_2, meanonly
-    local r2 = r(mean)
+    local r2_avg = r(mean)
 
     // fix matrix names
     local names = "`X' _cons"
@@ -102,7 +103,7 @@ program define fm, eclass
     ereturn scalar df_m = `df_m'
     ereturn scalar df_r = `df_r'
     ereturn local T = `T'
-    ereturn scalar r2 = `r2'
+    ereturn scalar r2_avg = `r2_avg'
     ereturn local cmd "fm"
     ereturn local vce "Newey-West (1987) with `lags' lags"
     local title "Fama-Macbeth (1973) regression with Newey-West (1987) standard errors (`lags' lags)"
@@ -123,7 +124,7 @@ program define fm, eclass
     display _column(42) "F(" %2.0f e(df_m) ", " %4.0f e(df_r) ")" ///
                                                     _column(67) " = " %9.3fc e(F)
     display _column(42) "Prob > F"                  _column(67) " = " %9.3fc fprob(e(df_m), e(df_r), e(F))
-    display _column(42) "Average R-squared"         _column(67) " = " %9.3fc e(r2)
+    display _column(42) "Average R-squared"         _column(67) " = " %9.3fc e(r2_avg)
     ereturn display
 
 end
