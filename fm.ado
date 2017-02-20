@@ -58,6 +58,9 @@ program define fm, eclass
     else if inlist("`estimator'", "regress") {
         quietly statsby _b e(N) e(r2) if `touse', clear by(`time') : `first'
     }
+    else if inlist("`estimator'", "areg") {
+        quietly statsby _b e(N) e(r2) if `touse', clear by(`time') : `first'
+    }
     else {
         display as error "estimator `estimator' not recognized"
         exit 111
