@@ -1,6 +1,6 @@
 # Stata
 
-My collection of Stata .ado files
+My Stata .ado files
 
 ## event_study
 
