@@ -12,7 +12,7 @@ program effects
 			if ("`v'" != "_cons") {
 
 				display ""
-				summarize `v', detail
+				summarize `v' if e(sample), detail
 				scalar beta = b[1, `i']
 				scalar p75 = `r(p75)'
 				scalar p25 = `r(p25)'
@@ -39,7 +39,7 @@ program effects
 			if ("`v'" != "_cons") {
 
 				display ""
-				summarize `v', detail
+				summarize `v' if e(sample), detail
 				scalar beta = b[1, `i']
 				scalar p75 = `r(p75)'
 				scalar p25 = `r(p25)'
