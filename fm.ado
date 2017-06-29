@@ -1,11 +1,12 @@
-*! Date     : 2017-06-28
-*! version  : 0.5
+*! Date     : 2017-06-29
+*! version  : 0.6
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! takes coefficients from -statsby- and time/lags for Newey-West SEs
 
 /* 
+2017-06-29 v0.6 logit/probit models return exp(beta*x) marginal effects
 2017-06-28 v0.5 marginal effect options (cross-sectional iqr and sd)
 2016-12-11 v0.4 unique name for average R2
 2016-07-21 v0.3 option to save first-stage results
@@ -103,7 +104,15 @@ program define fm, eclass
 
         /* calculate beta*IQR (or beta*SD) for each cross-section */
         foreach x of local X {
-            generate _beta_x_`dX'_`x' = _b_`x' * _`dX'_`x'
+            /* if binary choice model, then return odds ratio exp(beta*x) */
+            if inlist("`estimator'", "probit", "logit", "logistic") {
+                generate _beta_x_`dX'_`x' = exp(_b_`x' * _`dX'_`x')
+                local note "Note: `dX' is mean of cross-sectional exp(b*x)"
+            }
+            else {
+                generate _beta_x_`dX'_`x' = _b_`x' * _`dX'_`x'
+                local note "Note: `dX' is mean of cross-sectional b*x"
+            }
 
             quietly tsset `time'
             quietly newey _beta_x_`dX'_`x', lag(`lag')
@@ -162,6 +171,7 @@ program define fm, eclass
     display _column(42) as text "Prob > F"                  _column(67) " = " as result %9.3f fprob(e(df_m), e(df_r), e(F))
     display _column(42) as text "Average R-squared"         _column(67) " = " as result %9.3f e(r2_avg)
     ereturn display
+    display as text "`note'"
     
 
 end
