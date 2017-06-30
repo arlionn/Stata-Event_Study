@@ -1,11 +1,12 @@
 *! Date     : 2017-06-30
-*! version  : 0.7
+*! version  : 0.8
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! takes coefficients from -statsby- and time/lags for Newey-West SEs
 
 /* 
+2017-06-30 v0.8 simplified and removed marginal effects
 2017-06-30 v0.7 marginal effects use sample bhat
 2017-06-29 v0.6 logit/probit models return exp(beta*x) marginal effects
 2017-06-28 v0.5 marginal effect options (cross-sectional iqr and sd)
@@ -18,22 +19,15 @@
 program define fm, eclass 
     version 13
 
-    syntax varlist [if] [in] [ , estimator(string) options(string) lag(integer 0) iqr sd ]
+    syntax varlist [if] [in] [ , estimator(string) options(string) lag(integer 0) ]
     marksample touse
     tempname beta VCV
-    tempfile coefs
     
-    /* use regress as default estimator */
+    /* regress is default estimator */
     if "`estimator'" == "" local estimator "regress"
 
     /* add comma prefix to options */
     if "`options'" != "" local options ", `options'"
-
-    /* for simplicity, optional marginal effects based on either IQR or SD, not both */
-    if ("`iqr'" != "") & ("`sd'" != "") {
-        display as error "Select either IQR or SD, not both"
-    }    
-    local dX `iqr' `sd'
 
     /* check panel and get time variable */
     quietly xtset
@@ -44,15 +38,15 @@ program define fm, eclass
     local y `1'
     macro shift 1
     local X `*'
-    local Xcons `X' cons
 
-    /* run first-stage (cross-sectional) regressions */
+    /* estimate first-stage (cross-sectional) coefficients */
     preserve
     if inlist("`estimator'", "regress", "areg") {
         quietly statsby _b e(N) e(r2) if `touse', ///
             by(`time') clear ///
             : `estimator' `y' `X' `options'
 
+        /* standardize prefixes */
         rename _eq2_stat* _stat*
     }
     else if inlist("`estimator'", "probit", "logit", "logistic", "tobit") {
@@ -61,7 +55,7 @@ program define fm, eclass
             : `estimator' `y' `X' `options'
 
         /* standardize prefixes */
-        if inlist("`estimator'", "logit") {
+        if inlist("`estimator'", "logit", "logistic") {
             rename `y'_b* _b*
             rename _eq2_stat* _stat*
         }
@@ -75,81 +69,40 @@ program define fm, eclass
         exit 111
     }
 
-    /* newey is same as regress if lag() is default of zero */
+    /* estimate time-series means and standard errors */
+    /* first independent variables */
     quietly tsset `time'
-    foreach x of local Xcons {
+    foreach x of local X {
         quietly newey _b_`x', lag(`lag')
         matrix `beta' = nullmat(`beta'), e(b)
         matrix `VCV' = nullmat(`VCV'), e(V)
-        if ("`x'" == "cons") local x _cons
-        if ("`dX'" == "") {
-            local names `names' `x'
-        }
-        else {
-            local names `names' main:`x'
-        }
+        local names `names' `x'
     }
 
-    /* assign optional marginal effects to same matrix */
-    /* Example 5 at http://www.stata.com/manuals13/pereturn.pdf */
-    if ("`dX'" != "") {
-        /* store coefficients, Ns, and R2s to temporary file */
-        save "`coefs'"
+    /* then intercept */
+    quietly newey _b_cons, lag(`lag')
+    matrix `beta' = nullmat(`beta'), e(b)
+    matrix `VCV' = nullmat(`VCV'), e(V)
+    local names `names' _cons
 
-        /* restore main data, but immediately re-preserve */
-        restore, preserve
-
-        /* find cross-sectional IQR or SD */
-        collapse (`dX') `X', by(`time')
-
-        /* calculate b hat*IQR (or b hat*SD) for each cross-section */
-        local i = 1
-        foreach x of local X {
-            /* if binary choice model, then return odds ratio exp(beta*x) */
-            if inlist("`estimator'", "probit", "logit", "logistic") {
-                local bhat = `beta'[1, `i']
-                generate _bhat_`x' = exp(`bhat' * `x')
-                local note "Note: `dX' model presents mean of cross-sectional exp(b hat*`dX')"
-                local ++i
-            }
-            else {
-                matrix list `beta'
-                display "`x'"
-                local bhat = `beta'[1, `i']
-                generate _bhat_`x' = `bhat' * `x'
-                local note "Note: `dX' model presents mean of cross-sectional (b hat*`dX')"
-                local ++i
-            }
-
-            quietly tsset `time'
-            quietly newey _bhat_`x', lag(`lag')
-            matrix `beta' = nullmat(`beta'), e(b)
-            matrix `VCV' = nullmat(`VCV'), e(V)
-            if ("`x'" == "cons") local x _cons
-            local names `names' `dX':`x'
-        }
-        
-        /* bring back coefficients, Ns, and R2s to temporary file */
-        use "`coefs'", clear
-    }
-
-    /* to this point VCV is row vector of variances */
+    /* generate covariance matric from row vector */
     matrix `VCV' = diag(`VCV')
 
-    /* fix matrix names */
+    /* assign matrix names */
     matrix colnames `beta' = `names'
     matrix colnames `VCV' = `names'
     matrix rownames `VCV' = `names'
     /* matrix list `beta' */
     /* matrix list `VCV' */
 
-    /* other descriptives */
+    /* number of observations and panels */
     summarize _stat_1, meanonly
     local N = r(sum)
     local T = r(N)
     local df_r = `T' - 1
-    local df_m : word count `X'
+    local df_m = colsof(`VCV')
 
+    /* average R-squared */
     summarize _stat_2, meanonly
     local r2_avg = r(mean)
 
@@ -165,7 +118,6 @@ program define fm, eclass
     ereturn local vce "Newey-West (1987) with `lag' lag"
     local title "Fama-Macbeth (1973) regression with Newey-West (1987) standard errors (`lag' lag)"
     ereturn local title `title'
-    ereturn local first "`first'"
 
     /* must be after posting other results */
     quietly test `X'
@@ -182,7 +134,5 @@ program define fm, eclass
     display _column(42) as text "Prob > F"                  _column(67) " = " as result %9.3f fprob(e(df_m), e(df_r), e(F))
     display _column(42) as text "Average R-squared"         _column(67) " = " as result %9.3f e(r2_avg)
     ereturn display
-    display as text "`note'"
 
-    /* restores by default */
 end

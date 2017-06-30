@@ -2,10 +2,10 @@
 discard
 
 webuse grunfeld, clear
-expand 1000, generate(new)
-bysort company time (new) : generate newsum = sum(new)
-egen newcompany = group(newsum company)
-xtset newcompany year
+/* expand 1000, generate(new) */
+/* bysort company time (new) : generate newsum = sum(new) */
+/* egen newcompany = group(newsum company) */
+/* xtset newcompany year */
 
 /* /1* ------------------------------------------------------------------------ *1/ */
 /* /1* rolling beta benchmarks *1/ */
@@ -56,22 +56,25 @@ xtset newcompany year
 /* ------------------------------------------------------------------------ */
 
 timer clear
+eststo clear
 
 
 timer on 1
-fm mvalue kstock invest, estimator(tobit) options(ll(0)) lag(4) iqr
+fm mvalue kstock invest, estimator(regress) lag(4)
+eststo
 timer off 1
 
-/* timer on 2 */
-/* xtfmb mvalue kstock invest, lag(4) */
-/* timer off 2 */
+timer on 2
+xtfmb mvalue kstock invest, lag(4)
+eststo
+timer off 2
 
 timer on 3
 preserve
-statsby _b e(N) e(r2_p), clear by(year) : tobit mvalue kstock invest, ll(0)
+statsby _b e(N) e(r2_p), clear by(year) : regress mvalue kstock invest
 tabstat *, stat(mean semean)
 restore
 timer off 3
 
 timer list
-
+esttab
