@@ -1,11 +1,12 @@
-*! Date     : 2017-06-29
-*! version  : 0.6
+*! Date     : 2017-06-30
+*! version  : 0.7
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! takes coefficients from -statsby- and time/lags for Newey-West SEs
 
 /* 
+2017-06-30 v0.7 marginal effects use sample bhat
 2017-06-29 v0.6 logit/probit models return exp(beta*x) marginal effects
 2017-06-28 v0.5 marginal effect options (cross-sectional iqr and sd)
 2016-12-11 v0.4 unique name for average R2
@@ -20,14 +21,15 @@ program define fm, eclass
     syntax varlist [if] [in] [ , estimator(string) options(string) lag(integer 0) iqr sd ]
     marksample touse
     tempname beta VCV
+    tempfile coefs
     
     /* use regress as default estimator */
     if "`estimator'" == "" local estimator "regress"
 
     /* add comma prefix to options */
-    if "`options'" != "" local options " , `options'"
+    if "`options'" != "" local options ", `options'"
 
-    /* for simplicity, optional marginal effects based on either IQR or SD */
+    /* for simplicity, optional marginal effects based on either IQR or SD, not both */
     if ("`iqr'" != "") & ("`sd'" != "") {
         display as error "Select either IQR or SD, not both"
     }    
@@ -50,22 +52,28 @@ program define fm, eclass
         quietly statsby _b e(N) e(r2) if `touse', ///
             by(`time') clear ///
             : `estimator' `y' `X' `options'
+
+        rename _eq2_stat* _stat*
     }
     else if inlist("`estimator'", "probit", "logit", "logistic", "tobit") {
         quietly statsby _b e(N) e(r2_p) if `touse', ///
             by(`time') clear basepop(_n < 1000) ///
             : `estimator' `y' `X' `options'
+
+        /* standardize prefixes */
+        if inlist("`estimator'", "logit") {
+            rename `y'_b* _b*
+            rename _eq2_stat* _stat*
+        }
+        else if inlist("`estimator'", "tobit") {
+            rename model_b* _b*
+            rename _eq3_stat* _stat*
+        }
     }
     else {
         display as error "Estimator `estimator' not supported"
         exit 111
     }
-
-    /* different models assign different prefixes */
-    capture rename `y'_b* _b*           // logit model
-    capture rename model_b* _b*         // tobit model
-    capture rename _eq2_stat* _stat*    // logit model
-    capture rename _eq3_stat* _stat*    // tobit model
 
     /* newey is same as regress if lag() is default of zero */
     quietly tsset `time'
@@ -85,45 +93,55 @@ program define fm, eclass
     /* assign optional marginal effects to same matrix */
     /* Example 5 at http://www.stata.com/manuals13/pereturn.pdf */
     if ("`dX'" != "") {
-        /* save coefficients to temporary file */
-        tempfile coefs
-        quietly save "`coefs'"
+        /* store coefficients, Ns, and R2s to temporary file */
+        save "`coefs'"
 
         /* restore main data, but immediately re-preserve */
-        restore
-        preserve
+        restore, preserve
 
         /* find cross-sectional IQR or SD */
         collapse (`dX') `X', by(`time')
-        rename (`X') _`dX'_=
 
-        /* merge back coefficients */
-        quietly merge 1:1 `time' using "`coefs'"
-        quietly keep if inlist(_merge, 3)
-        quietly drop _merge
-
-        /* calculate beta*IQR (or beta*SD) for each cross-section */
+        /* calculate b hat*IQR (or b hat*SD) for each cross-section */
+        local i = 1
         foreach x of local X {
             /* if binary choice model, then return odds ratio exp(beta*x) */
             if inlist("`estimator'", "probit", "logit", "logistic") {
-                generate _beta_x_`dX'_`x' = exp(_b_`x' * _`dX'_`x')
-                local note "Note: `dX' is mean of cross-sectional exp(b*x)"
+                local bhat = `beta'[1, `i']
+                generate _bhat_`x' = exp(`bhat' * `x')
+                local note "Note: `dX' model presents mean of cross-sectional exp(b hat*`dX')"
+                local ++i
             }
             else {
-                generate _beta_x_`dX'_`x' = _b_`x' * _`dX'_`x'
-                local note "Note: `dX' is mean of cross-sectional b*x"
+                matrix list `beta'
+                display "`x'"
+                local bhat = `beta'[1, `i']
+                generate _bhat_`x' = `bhat' * `x'
+                local note "Note: `dX' model presents mean of cross-sectional (b hat*`dX')"
+                local ++i
             }
 
             quietly tsset `time'
-            quietly newey _beta_x_`dX'_`x', lag(`lag')
+            quietly newey _bhat_`x', lag(`lag')
             matrix `beta' = nullmat(`beta'), e(b)
             matrix `VCV' = nullmat(`VCV'), e(V)
             if ("`x'" == "cons") local x _cons
             local names `names' `dX':`x'
         }
+        
+        /* bring back coefficients, Ns, and R2s to temporary file */
+        use "`coefs'", clear
     }
 
+    /* to this point VCV is row vector of variances */
     matrix `VCV' = diag(`VCV')
+
+    /* fix matrix names */
+    matrix colnames `beta' = `names'
+    matrix colnames `VCV' = `names'
+    matrix rownames `VCV' = `names'
+    /* matrix list `beta' */
+    /* matrix list `VCV' */
 
     /* other descriptives */
     summarize _stat_1, meanonly
@@ -135,14 +153,7 @@ program define fm, eclass
     summarize _stat_2, meanonly
     local r2_avg = r(mean)
 
-    /* fix matrix names */
-    matrix colnames `beta' = `names'
-    matrix colnames `VCV' = `names'
-    matrix rownames `VCV' = `names'
-    /* matrix list `beta' */
-    /* matrix list `VCV' */
-
-    /* store results */ 
+    /* post results */ 
     /* depname(`y') option requires y to be available */
     ereturn post `beta' `VCV', depname("`y'") obs(`N') 
     /* ereturn post `beta' `VCV', depname("`y'") obs(`N') esample(`touse') */
@@ -172,6 +183,6 @@ program define fm, eclass
     display _column(42) as text "Average R-squared"         _column(67) " = " as result %9.3f e(r2_avg)
     ereturn display
     display as text "`note'"
-    
 
+    /* restores by default */
 end
