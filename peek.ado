@@ -1,16 +1,11 @@
 program peek
 	version 13.1
-	syntax, FILEname(string) [VARiables(namelist)]
+	syntax [namelist] using [, n(int 5) ]
 
-	// use built-in error codes
-	confirm file "`filename'"
 	preserve
-	use "`filename'", clear
+	use `myuse' `using', clear
+	list `namelist' in F/`n'
+	list `namelist' in -`n'/L
+	describe `namelist'
 
-	// depends on my -head- and -tail- .ado files
-	describe `variables'
-	head `variables'
-	tail `variables'
-
-	restore
 end

@@ -1,11 +1,12 @@
-*! Date     : 2016-07-22
-*! version  : 0.5
+*! Date     : 2017-07-05
+*! version  : 0.6
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
-*! fast rolling CAPM regressions (single-factor)
+*! fast rolling regressions (univariate)
 
 /* 
+2017-07-05 v0.6 renamed alfa to alpha, removed CAPM references
 2016-07-22 v0.5 simplified code (fewer temporary variables)
 2016-07-21 v0.4 add min/max with growing windows, count of observations used
 2015-11-05 v0.3 
@@ -16,7 +17,7 @@
 program rolling_beta
     version 11.2
 
-    syntax varlist(min=2 max=2 numeric) [, long(integer 36) short(integer 36) faster]
+    syntax varlist(min=2 max=2 numeric) [ , short(integer 36) long(integer 36) faster ]
 
     // dependent and indpendent vars from varlist
     tempvar x y 
@@ -82,17 +83,17 @@ program rolling_beta
         generate `varx' = (`x2s' - `x2s'[`idl'])/(obs - 1) - ((`xs' - `xs'[`idl'])/obs)*((`xs' - `xs'[`idl'])/obs)*obs/(obs - 1)
         generate `vary' = (`y2s' - `y2s'[`idl'])/(obs - 1) - ((`ys' - `ys'[`idl'])/obs)*((`ys' - `ys'[`idl'])/obs)*obs/(obs - 1)
 
-        // alfa, beta, r2, s2
+        // alpha, beta, r2, s2
         generate beta = `covxy'/`varx'
-        generate alfa = ((`ys' - `ys'[`idl']) - beta*(`xs' - `xs'[`idl']))/obs
+        generate alpha = ((`ys' - `ys'[`idl']) - beta*(`xs' - `xs'[`idl']))/obs
         generate r2 = `covxy'*`covxy'/`varx'/`vary'
         generate s2 = `vary'*(1 - r2)*(obs - 1)/(obs - 2)
 
         // labels
-        label variable beta "Rolling CAPM beta"
-        label variable alfa "Rolling CAPM alpha"
-        label variable r2 "Rolling CAPM R2"
-        label variable s2 "Rolling CAPM S2"
+        label variable beta "Rolling beta"
+        label variable alpha "Rolling alpha"
+        label variable r2 "Rolling R2"
+        label variable s2 "Rolling S2"
         label variable obs "Observations used"
         label variable len "Window length"
 
@@ -116,15 +117,15 @@ program rolling_beta
 
         // generate alpha, beta, r2, s2
         generate beta = `covxy'/`varx'
-        generate alfa = (s`w'.`ys' - beta*s`w'.`xs')/obs
+        generate alpha = (s`w'.`ys' - beta*s`w'.`xs')/obs
         generate r2 = `covxy'*`covxy'/`varx'/`vary'
         generate s2 = `vary'*(1 - r2)*(obs - 1)/(obs - 2)
 
         // labels
-        label variable beta "Rolling CAPM beta"
-        label variable alfa "Rolling CAPM alpha"
-        label variable r2 "Rolling CAPM R2"
-        label variable s2 "Rolling CAPM S2"
+        label variable beta "Rolling beta"
+        label variable alpha "Rolling alpha"
+        label variable r2 "Rolling R2"
+        label variable s2 "Rolling S2"
         label variable obs "Observations used"
         label variable len "Window length"
     }

@@ -7,12 +7,12 @@
 
 /* 
 2016-07-22 v0.1 fork of rolling_beta
- */
+*/
 
 program rolling_rho
     version 11.2
 
-    syntax varlist(min=2 max=2 numeric) [, long(integer 36) short(integer 36) faster]
+    syntax varlist(min=2 max=2 numeric) [ , short(integer 36)  long(integer 36) faster ]
 
     // dependent and indpendent vars from varlist
     tempvar x y 

@@ -7,12 +7,12 @@
 
 /* 
 2016-07-22 v0.1 fork of my rolling_beta Github repository
- */
+*/
 
 program rolling_sigma
     version 11.2
 
-    syntax varname(numeric) [, long(integer 36) short(integer 36) faster]
+    syntax varname(numeric) [ , short(integer 36) long(integer 36) faster ]
 
     // dependent and indpendent vars from varlist
     tempvar x 
