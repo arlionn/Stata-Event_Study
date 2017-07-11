@@ -1,4 +1,4 @@
-* standardizes data and tables
+/* macros to standardizes data and tables */
 
 global DESCRIPTIVES
 
