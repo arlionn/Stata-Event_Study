@@ -1,5 +1,7 @@
-// for testing rolling_beta and fm
+/* for testing rolling_beta and fm */
 discard
+
+/* {{{ data */
 
 webuse grunfeld, clear
 /* expand 1000, generate(new) */
@@ -7,9 +9,9 @@ webuse grunfeld, clear
 /* egen newcompany = group(newsum company) */
 /* xtset newcompany year */
 
-/* /1* ------------------------------------------------------------------------ *1/ */
-/* /1* rolling beta benchmarks *1/ */
-/* /1* ------------------------------------------------------------------------ *1/ */
+/* }}} */
+
+/* {{{ rolling beta benchmarks */
 
 /* timer clear */
 
@@ -41,7 +43,6 @@ webuse grunfeld, clear
 /* list in 1/20 */
 /* restore */
 
-
 /* timer list */
 
 /* /1* timer list *1/ */
@@ -50,10 +51,9 @@ webuse grunfeld, clear
 /* /1*  3:      0.11 /        1 =       0.1130 *1/ */
 /* /1*  4:      0.17 /        1 =       0.1730 *1/ */
 
+/* }}} */
 
-/* ------------------------------------------------------------------------ */
-/* Fama-MacBeth benchmarks */
-/* ------------------------------------------------------------------------ */
+/* {{{ Fama-MacBeth benchmarks */
 
 timer clear
 eststo clear
@@ -78,3 +78,6 @@ timer off 3
 
 timer list
 esttab
+
+/* }}} */
+
