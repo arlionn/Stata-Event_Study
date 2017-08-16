@@ -4,21 +4,17 @@
 
 /* }}} */
 
-
 /* {{{ general parameters */
 
 /* }}} */
 
-
-/* {{{ variables from raw data sources */ 
+/* {{{ variables for raw data sources */ 
 
 /* }}} */
-
 
 /* {{{ variables for subsets */
 
 /* }}} */
-
 
 /* {{{ variables for tables and regressions */
 
