@@ -1,11 +1,12 @@
-*! Date     : 2017-08-04
-*! version  : 0.2
+*! Date     : 2017-08-17
+*! version  : 0.3
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! get Fama-French factors from French Data Library
 
 /* 
+2017-08-17 v0.3 more consistent date names
 2017-08-04 v0.2 fixed date label, display summary statistics
 2016-09-02 v0.1 first upload to GitHub
 */
@@ -30,9 +31,9 @@ program define fffactors
 	compress
 
 	// fix date
-	generate dateYM = mofd(date(date, "YM"))
-	format dateYM %tm
-    label variable dateYM "Date"
+	generate date_ym = mofd(date(date, "YM"))
+	format date_ym %tm
+    label variable date_ym "Date"
 	drop date
 
 	// fix returns
@@ -45,11 +46,11 @@ program define fffactors
     summarize
 
     /* first and last date */
-    sort dateYM
+    sort date_ym
     display "First date:"
-    list dateYM in 1
+    list date_ym in 1
 
     display "Last date:"
-    list dateYM in L
+    list date_ym in L
     
 end

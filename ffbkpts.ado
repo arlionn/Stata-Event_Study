@@ -1,11 +1,12 @@
-*! Date     : 2016-09-06
-*! version  : 0.2
+*! Date     : 2017-08-17
+*! version  : 0.3
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! get breakpoints from French Data Library
 
 /* 
+2017-08-17 v0.3 consistent date name
 2016-09-06 v0.2 added B/M breakpoints
 2016-09-02 v0.1 first 
  */
@@ -40,8 +41,8 @@ program define ffbkpts
 		}
 
 		// fix date
-		generate dateYM = mofd(date(date, "YM"))
-		format dateYM %tm
+		generate date_ym = mofd(date(date, "YM"))
+		format date_ym %tm
 		drop date
 	}
 
