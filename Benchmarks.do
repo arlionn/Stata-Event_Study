@@ -58,20 +58,22 @@ webuse grunfeld, clear
 timer clear
 eststo clear
 
-
+/* my code */
 timer on 1
-fm mvalue kstock invest, estimator(regress) lag(4)
+fm mvalue kstock invest, estimator(regress) lags(4)
 eststo
 timer off 1
 
+/* xtfmb (ssc install xtfmb) */
 timer on 2
 xtfmb mvalue kstock invest, lag(4)
 eststo
 timer off 2
 
+/* manually */
 timer on 3
 preserve
-statsby _b e(N) e(r2_p), clear by(year) : regress mvalue kstock invest
+statsby _b e(N) e(r2), clear by(year) : regress mvalue kstock invest
 tabstat *, stat(mean semean)
 restore
 timer off 3

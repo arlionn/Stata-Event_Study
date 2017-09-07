@@ -1,11 +1,12 @@
-*! Date     : 2017-06-30
-*! version  : 0.8
+*! Date     : 2017-09-07
+*! version  : 0.9
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! takes coefficients from -statsby- and time/lags for Newey-West SEs
 
 /* 
+2017-09-07 v0.9 allow abbreviation of options
 2017-06-30 v0.8 simplified and removed marginal effects
 2017-06-30 v0.7 marginal effects use sample bhat
 2017-06-29 v0.6 logit/probit models return exp(beta*x) marginal effects
@@ -19,7 +20,7 @@
 program define fm, eclass 
     version 13
 
-    syntax varlist [if] [in] [ , estimator(string) options(string) lag(integer 0) ]
+    syntax varlist [if] [in] [ , Estimator(string) Lags(integer 0) Options(string) ]
     marksample touse
     tempname beta VCV
     
@@ -73,14 +74,14 @@ program define fm, eclass
     /* first independent variables */
     quietly tsset `time'
     foreach x of local X {
-        quietly newey _b_`x', lag(`lag')
+        quietly newey _b_`x', lag(`lags')
         matrix `beta' = nullmat(`beta'), e(b)
         matrix `VCV' = nullmat(`VCV'), e(V)
         local names `names' `x'
     }
 
     /* then intercept */
-    quietly newey _b_cons, lag(`lag')
+    quietly newey _b_cons, lag(`lags')
     matrix `beta' = nullmat(`beta'), e(b)
     matrix `VCV' = nullmat(`VCV'), e(V)
     local names `names' _cons
@@ -115,8 +116,8 @@ program define fm, eclass
     ereturn scalar T = `T'
     ereturn scalar r2_avg = `r2_avg'
     ereturn local cmd "fm"
-    ereturn local vce "Newey-West (1987) with `lag' lag"
-    local title "Fama-Macbeth (1973) regression with Newey-West (1987) standard errors (`lag' lag)"
+    ereturn local vce "Newey-West (1987) with `lags' lag"
+    local title "Fama-Macbeth (1973) regression with Newey-West (1987) standard errors (`lags' lag)"
     ereturn local title `title'
 
     /* must be after posting other results */
