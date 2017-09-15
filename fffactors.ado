@@ -15,7 +15,7 @@
 program define fffactors
 
     version 13.1
-	syntax , clear
+	syntax , clear [ KEEPfiles ]
     
     /* {{{ 3-factor file */
 
@@ -63,11 +63,20 @@ program define fffactors
     order Date
 
 	/* fix labels */
-    ds, not(varlabel)
+    quietly ds, not(varlabel)
     foreach v in `r(varlist)' {
         label variable `v' "`v'"
 	}
 
     /* }}} */
     
+	/* {{{ by default, remove files */
+	if ("`keepfiles'" == "") {
+        rm "F-F_Research_Data_Factors_CSV.zip"
+        rm "F-F_Momentum_Factor.CSV"
+		rm "F-F_Momentum_Factor_CSV.zip"
+		rm "F-F_Momentum_Factor.CSV"
+	}
+    /* }}} */
+
 end

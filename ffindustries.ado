@@ -1,28 +1,38 @@
-*! Date     : 2017-05-05 
-*! version  : 0.2
+*! Date     : 2017-09-15
+*! version  : 0.3
 *! Author   : Richard Herron
 *! Email    : richard.c.herron@gmail.com
 
 *! get Fama-French industry data, keep in memory
 
 /* 
+2017-09-15 v0.3 smarter industries, simpler keep option, error handling
 2017-05-05 v0.2 refactor, adds 12-industry download
 2016-08-12 v0.1 original
  */
 
-program ffind
+program ffindustries
 	version 13.1
 
-	syntax [, level(integer 48) clear noremove noexpand]
+	syntax , clear [ Level(integer 48) KEEPfiles ]
 
-	// get file
-	// http://blog.stata.com/2010/12/01/automating-web-downloads-and-file-unzipping/
+    /* test if industry level is valid */
+    if !inlist(`level', 5, 10, 12, 17, 30, 38, 48, 49) {
+        display as error ///
+            "industry levels are 5, 10, 12, 17, 30, 38, 48, and 49"
+        exit 197
+    }
+
+    /* /1* T/S *1/ */
+    /* local clear clear */
+    /* local level 48 */
+
+	/* get file */
 	local cloud "http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes`level'.zip"
-	tempfile zip
 	copy "`cloud'" "Siccodes`level'.zip", replace
 	unzipfile "Siccodes`level'.zip", replace
 
-	// read
+	/* read */
 	infix ///
             int indNumber 1-2 ///
             str indShort 4-9 ///
@@ -30,52 +40,43 @@ program ffind
             using "Siccodes`level'.txt", `clear'
     drop if missing(indNumber) & missing(indShort) & missing(indLong)
 
-	// put long name and SIC range in separate columns
+	/* put long name and SIC range in separate columns */
     generate hasSic = regexm(indLong, "^[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]")
     generate sicRange = substr(indLong, 1, 9) if hasSic
     generate sicName = substr(indLong, 10, .) if hasSic
 
-	// by default expand to merge-able data
-    // OTHER industry may need range
-	if ("`expand'" == "") {
-        replace sicRange = "0000-9999" if (_n == _N) & !hasSic
-    }
-    drop hasSic
-
-	// carryforward
+	/* carryforward */
     replace indNum = indNum[_n - 1] if missing(indNum)
     replace indShort = indShort[_n - 1] if missing(indShort)
     bysort indNum : replace indLong = indLong[1] if (_n > 1)
 
-	// expand
+	/* expand */
     drop if missing(sicRange)
 	generate sicLow = substr(sicRange, 1, 4)
 	generate sicHigh = substr(sicRange, 6, 4)
 	destring sicLow sicHigh, replace
 
-	// by default expand to merge-able data
-	if ("`expand'" == "") {
-        /* create row for every SIC code */
-		generate N = (sicHigh - sicLow) + 1
-		expand N
-		bysort indNumber sicLow : generate sic = sicLow + (_n - 1)
-        
-        /* code duplicates every industry into "other" */
-        sort sic indNum
-        duplicates drop sic, force
-        sort indNum sic
-	}
+    /* create row for every SIC code */
+    generate N = (sicHigh - sicLow) + 1
+    expand N
+    bysort indNumber sicLow : generate sic = sicLow + (_n - 1)
     
-	// clean up
-    drop sicLow sicHigh N
-	ds, has(type string)
+    /* code duplicates every industry into "other" */
+    sort sic indNum
+    duplicates drop sic, force
+    sort indNum sic
+    
+	/* clean up */
+    drop hasSic sicLow sicHigh N
+	quietly ds, has(type string)
 	foreach v of varlist `r(varlist)' {
-        replace `v' = stritrim(`v')
+        replace `v' = strtrim( stritrim( `v' ) )
 	}
+    format sic %04.0f
 	compress
 
-	// by default remove files
-	if ("`remove'" == "") {
+	/* by default, remove files */
+	if ("`keepfiles'" == "") {
 		rm "Siccodes`level'.txt"
 		rm "Siccodes`level'.zip"
 	}
