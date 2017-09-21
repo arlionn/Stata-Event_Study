@@ -16,6 +16,7 @@ program define fffactors
 
     version 13.1
 	syntax , clear [ KEEPfiles ]
+    pwd
     
     /* {{{ 3-factor file */
 
@@ -73,7 +74,7 @@ program define fffactors
 	/* {{{ by default, remove files */
 	if ("`keepfiles'" == "") {
         rm "F-F_Research_Data_Factors_CSV.zip"
-        rm "F-F_Momentum_Factor.CSV"
+        rm "F-F_Research_Data_Factors.CSV"
 		rm "F-F_Momentum_Factor_CSV.zip"
 		rm "F-F_Momentum_Factor.CSV"
 	}
